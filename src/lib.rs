@@ -4,7 +4,7 @@
 #![doc(
     html_logo_url = "https://raw.githubusercontent.com/RustCrypto/meta/master/logo.svg",
     html_favicon_url = "https://raw.githubusercontent.com/RustCrypto/meta/master/logo.svg",
-    html_root_url = "https://docs.rs/p384/0.10.0-pre"
+    html_root_url = "https://docs.rs/p384_rs"
 )]
 #![forbid(unsafe_code)]
 #![warn(missing_docs, rust_2018_idioms, unused_qualifications)]
@@ -13,16 +13,14 @@
 #[cfg_attr(docsrs, doc(cfg(feature = "ecdsa")))]
 pub mod ecdsa;
 
-#[cfg(feature = "broken-arithmetic-do-not-use")]
+#[cfg(feature = "arithmetic")]
 mod arithmetic;
 
-pub use elliptic_curve::{self, bigint::U384};
-
-#[cfg(feature = "broken-arithmetic-do-not-use")]
+#[cfg(feature = "arithmetic")]
 pub use arithmetic::{affine::AffinePoint, scalar::Scalar};
-
 #[cfg(feature = "pkcs8")]
 pub use elliptic_curve::pkcs8;
+pub use elliptic_curve::{self, bigint::U384};
 
 /// Curve order.
 pub const ORDER: U384 =
@@ -48,8 +46,9 @@ use elliptic_curve::generic_array::{typenum::U49, GenericArray};
 ///     8707301988689241309860865136260764883745107765439761230575
 /// ```
 ///
-/// † *NOTE: the specific origins of this constant have never been fully disclosed
-///   (it is the SHA-1 digest of an inexplicable NSA-selected constant)*
+/// † *NOTE: the specific origins of this constant have never been fully
+/// disclosed   (it is the SHA-1 digest of an inexplicable NSA-selected
+/// constant)*
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, PartialOrd, Ord)]
 pub struct NistP384;
 
@@ -74,8 +73,8 @@ impl elliptic_curve::JwkParameters for NistP384 {
 }
 
 #[cfg(feature = "pkcs8")]
-impl elliptic_curve::AlgorithmParameters for NistP384 {
-    const OID: pkcs8::ObjectIdentifier = pkcs8::ObjectIdentifier::new("1.3.132.0.34");
+impl pkcs8::AssociatedOid for NistP384 {
+    const OID: pkcs8::ObjectIdentifier = pkcs8::ObjectIdentifier::new_unwrap("1.3.132.0.34");
 }
 
 /// Compressed SEC1-encoded NIST P-384 curve point.
@@ -83,36 +82,36 @@ pub type CompressedPoint = GenericArray<u8, U49>;
 
 /// NIST P-384 field element serialized as bytes.
 ///
-/// Byte array containing a serialized field element value (base field or scalar).
+/// Byte array containing a serialized field element value (base field or
+/// scalar).
 pub type FieldBytes = elliptic_curve::FieldBytes<NistP384>;
 
 /// NIST P-384 SEC1 encoded point.
 pub type EncodedPoint = elliptic_curve::sec1::EncodedPoint<NistP384>;
 
 /// Non-zero NIST P-384 scalar field element.
-#[cfg(feature = "broken-arithmetic-do-not-use")]
+#[cfg(feature = "arithmetic")]
 pub type NonZeroScalar = elliptic_curve::NonZeroScalar<NistP384>;
 
 /// NIST P-384 public key.
-#[cfg(feature = "broken-arithmetic-do-not-use")]
+#[cfg(feature = "arithmetic")]
 pub type PublicKey = elliptic_curve::PublicKey<NistP384>;
 
 /// NIST P-384 scalar core type.
 ///
-/// This is always available regardless of if the curve arithmetic feature is enabled.
+/// This is always available regardless of if the curve arithmetic feature is
+/// enabled.
 pub type ScalarCore = elliptic_curve::ScalarCore<NistP384>;
 
 /// NIST P-384 secret key.
 pub type SecretKey = elliptic_curve::SecretKey<NistP384>;
 
-impl elliptic_curve::sec1::ValidatePublicKey for NistP384 {}
-
 #[cfg(feature = "voprf")]
 #[cfg_attr(docsrs, doc(cfg(feature = "voprf")))]
 impl elliptic_curve::VoprfParameters for NistP384 {
-    /// See <https://www.ietf.org/archive/id/draft-irtf-cfrg-voprf-08.html#section-4.4-1.3>.
-    const ID: u16 = 0x0004;
-
     /// See <https://www.ietf.org/archive/id/draft-irtf-cfrg-voprf-08.html#section-4.4-1.2>.
     type Hash = sha2::Sha384;
+
+    /// See <https://www.ietf.org/archive/id/draft-irtf-cfrg-voprf-08.html#section-4.4-1.3>.
+    const ID: u16 = 0x0004;
 }

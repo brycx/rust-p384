@@ -3,9 +3,6 @@
 [![crate][crate-image]][crate-link]
 [![Docs][docs-image]][docs-link]
 ![Apache2/MIT licensed][license-image]
-![Rust Version][rustc-image]
-[![Project Chat][chat-image]][chat-link]
-[![Build Status][build-image]][build-link]
 
 NIST P-384 elliptic curve (a.k.a. secp384r1) types implemented in terms of
 traits from the [`elliptic-curve`] crate.
@@ -52,16 +49,12 @@ dual licensed as above, without any additional terms or conditions.
 
 [//]: # (badges)
 
-[crate-image]: https://img.shields.io/crates/v/p384.svg
-[crate-link]: https://crates.io/crates/p384
-[docs-image]: https://docs.rs/p384/badge.svg
-[docs-link]: https://docs.rs/p384/
+[crate-image]: https://img.shields.io/crates/v/p384_rs.svg
+[crate-link]: https://crates.io/crates/p384_rs
+[docs-image]: https://docs.rs/p384_rs/badge.svg
+[docs-link]: https://docs.rs/p384_rs/
 [license-image]: https://img.shields.io/badge/license-Apache2.0/MIT-blue.svg
 [rustc-image]: https://img.shields.io/badge/rustc-1.57+-blue.svg
-[chat-image]: https://img.shields.io/badge/zulip-join_chat-blue.svg
-[chat-link]: https://rustcrypto.zulipchat.com/#narrow/stream/260040-elliptic-curves
-[build-image]: https://github.com/RustCrypto/elliptic-curves/workflows/p384/badge.svg?branch=master&event=push
-[build-link]: https://github.com/RustCrypto/elliptic-curves/actions?query=workflow%3Ap384
 
 [//]: # (general links)
 

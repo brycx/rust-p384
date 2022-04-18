@@ -1,6 +1,7 @@
 //! Field arithmetic modulo p = 2^{384} − 2^{128} − 2^{96} + 2^{32} − 1
 //!
-//! Arithmetic implementations are extracted Rust code from the Coq fiat-crypto libraries.
+//! Arithmetic implementations are extracted Rust code from the Coq fiat-crypto
+//! libraries.
 //!
 //! # License
 //!
@@ -25,18 +26,16 @@
 #[rustfmt::skip]
 mod field_impl;
 
-pub(super) use self::field_impl::fiat_p384_montgomery_domain_field_element as FieldElementImpl;
-
-use self::field_impl::{
-    fiat_p384_add, fiat_p384_from_montgomery, fiat_p384_mul, fiat_p384_opp, fiat_p384_square,
-    fiat_p384_sub, fiat_p384_to_montgomery,
-};
-use crate::FieldBytes;
 use core::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
+
 use elliptic_curve::{
     subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption},
     zeroize::DefaultIsZeroes,
 };
+
+pub(super) use self::field_impl::fiat_p384_montgomery_domain_field_element as FieldElementImpl;
+use self::field_impl::*;
+use crate::FieldBytes;
 
 /// Type used to represent a limb.
 // TODO(tarcieri): hardcoded for 64-bit; add 32-bit support
@@ -63,23 +62,21 @@ pub(crate) const MODULUS: FieldElement = FieldElement([
 pub struct FieldElement(pub(super) FieldElementImpl);
 
 impl FieldElement {
-    /// Zero element.
-    pub const ZERO: Self = Self([0; LIMBS]);
-
     /// Multiplicative identity.
     #[cfg(target_pointer_width = "32")]
     pub const ONE: Self = Self([
         0x1, 0xffffffff, 0xffffffff, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
     ]);
-
     /// Multiplicative identity.
     #[cfg(target_pointer_width = "64")]
     pub const ONE: Self = Self([0xffffffff00000001, 0xffffffff, 0x1, 0x0, 0x0, 0x0]);
+    /// Zero element.
+    pub const ZERO: Self = Self([0; LIMBS]);
 
     /// Attempts to parse the given byte array as an SEC1-encoded field element.
     ///
-    /// Returns None if the byte array does not contain a big-endian integer in the range
-    /// [0, p).
+    /// Returns None if the byte array does not contain a big-endian integer in
+    /// the range [0, p).
     pub fn from_bytes(bytes: &FieldBytes) -> CtOption<Self> {
         let mut w = [Limb::default(); LIMBS];
 
@@ -129,13 +126,16 @@ impl FieldElement {
         self.ct_eq(&Self::ZERO)
     }
 
-    /// Determine if this `FieldElement` is odd in the SEC1 sense: `self mod 2 == 1`.
+    /// Determine if this `FieldElement` is odd in the SEC1 sense: `self mod 2
+    /// == 1`.
     ///
     /// # Returns
     ///
     /// If odd, return `Choice(1)`.  Otherwise, return `Choice(0)`.
     pub fn is_odd(&self) -> Choice {
-        Choice::from((self.0[0] % 2) as u8)
+        let mut non_mont = Default::default();
+        fiat_p384_from_montgomery(&mut non_mont, &self.0);
+        Choice::from((self.0[self.0.len() - 1] & 1) as u8)
     }
 
     /// Returns self + rhs.
@@ -152,6 +152,14 @@ impl FieldElement {
         let mut out = Self::ZERO;
         fiat_p384_sub(&mut out.0, &self.0, &rhs.0);
         out
+    }
+
+    /// Returns self - rhs as well as a carry
+    pub fn informed_subtract(&self, rhs: &Self) -> (Self, u8) {
+        let mut out = Self::ZERO;
+        fiat_p384_sub(&mut out.0, &self.0, &rhs.0);
+        let carry: bool = rhs.ct_gt(self).into();
+        (out, carry as _)
     }
 
     /// Returns self * rhs mod p.
@@ -186,14 +194,48 @@ impl FieldElement {
         out
     }
 
-    /// Returns the square root of self mod p, or `None` if no square root exists.
+    fn sqn(&self, n: usize) -> Self {
+        let mut x = *self;
+        for _ in 0..n {
+            x = x.square();
+        }
+        x
+    }
+
+    /// Returns the square root of self mod p, or `None` if no square root
+    /// exists.
     pub fn sqrt(&self) -> CtOption<Self> {
-        todo!()
+        // p mod 4 = 3 -> compute sqrt(x) using x^((p+1)/4) =
+        // x^9850501549098619803069760025035903451269934817616361666987073351061430442874217582261816522064734500465401743278080
+        let _1 = *self;
+        let _10 = _1.square();
+        let _11 = _1 * &_10;
+        let _110 = _11.square();
+        let _111 = _1 * &_110;
+        let _111000 = _111.sqn(3);
+        let _111111 = _111 * &_111000;
+        let _1111110 = _111111.square();
+        let _1111111 = _1 * &_1111110;
+        let x12 = _1111110.sqn(5) * &_111111;
+        let x24 = x12.sqn(12) * &x12;
+        let x31 = x24.sqn(7) * &_1111111;
+        let x32 = x31.square() * &_1;
+        let x63 = x32.sqn(31) * &x31;
+        let x126 = x63.sqn(63) * &x63;
+        let x252 = x126.sqn(126) * &x126;
+        let x255 = x252.sqn(3) * &_111;
+        let x = ((x255.sqn(33) * &x32).sqn(64) * &_1).sqn(30);
+
+        if x.square() == _1 {
+            CtOption::new(x, 1.into())
+        } else {
+            CtOption::new(x, 0.into())
+        }
     }
 
     /// Translate a field element out of the Montgomery domain.
     #[inline]
-    fn to_canonical(self) -> Self {
+    pub fn to_canonical(self) -> Self {
         let mut out = Self::ZERO;
         fiat_p384_from_montgomery(&mut out.0, &self.0);
         out
@@ -201,10 +243,75 @@ impl FieldElement {
 
     /// Translate a field element into the Montgomery domain.
     #[inline]
-    fn to_montgomery(self) -> Self {
+    pub fn to_montgomery(self) -> Self {
         let mut out = Self::ZERO;
         fiat_p384_to_montgomery(&mut out.0, &self.0);
         out
+    }
+
+    pub fn invert(&self) -> CtOption<Self> {
+        let limbs = &self.0;
+        type Fe = fiat_p384_montgomery_domain_field_element;
+        type Word = u64;
+        const LEN_PRIME: usize = 384;
+
+        const WORD_BITS: usize = 64;
+        const LIMBS_WORDS: usize = 6;
+        type XLimbs = [Word; LIMBS_WORDS + 1];
+
+        fn one() -> Fe {
+            let mut fe = Fe::default();
+            fiat_p384_set_one(&mut fe);
+            fe
+        }
+
+        const ITERATIONS: usize = (49 * LEN_PRIME + if LEN_PRIME < 46 { 80 } else { 57 }) / 17;
+        let mut d: Word = 1;
+        let mut f: XLimbs = Default::default();
+        fiat_p384_msat(&mut f);
+
+        let mut g: XLimbs = Default::default();
+        let mut g_: Fe = Default::default();
+        fiat_p384_from_montgomery(&mut g_, limbs);
+        g[..g_.len()].copy_from_slice(&g_);
+
+        let mut r = one();
+        let mut v: Fe = Default::default();
+
+        let mut precomp: Fe = Default::default();
+        fiat_p384_divstep_precomp(&mut precomp);
+
+        let mut out1: Word = Default::default();
+        let mut out2: XLimbs = Default::default();
+        let mut out3: XLimbs = Default::default();
+        let mut out4: Fe = Default::default();
+        let mut out5: Fe = Default::default();
+
+        let mut i: usize = 0;
+        while i < ITERATIONS - ITERATIONS % 2 {
+            fiat_p384_divstep(
+                &mut out1, &mut out2, &mut out3, &mut out4, &mut out5, d, &f, &g, &v, &r,
+            );
+            fiat_p384_divstep(
+                &mut d, &mut f, &mut g, &mut v, &mut r, out1, &out2, &out3, &out4, &out5,
+            );
+            i += 2;
+        }
+        if ITERATIONS % 2 != 0 {
+            fiat_p384_divstep(
+                &mut out1, &mut out2, &mut out3, &mut out4, &mut out5, d, &f, &g, &v, &r,
+            );
+            v = out4;
+            f = out2;
+        }
+        let mut v_opp: Fe = Default::default();
+        fiat_p384_opp(&mut v_opp, &v);
+        let s = ((f[f.len() - 1] >> (WORD_BITS - 1)) & 1) as u8;
+        let mut v_: Fe = Default::default();
+        fiat_p384_selectznz(&mut v_, s, &v, &v_opp);
+        let mut fe: Fe = Default::default();
+        fiat_p384_mul(&mut fe, &v_, &precomp);
+        CtOption::new(fe.into(), 1.into())
     }
 }
 
@@ -241,7 +348,50 @@ impl ConstantTimeEq for FieldElement {
     }
 }
 
+impl FieldElement {
+    fn from_repr(bytes: FieldBytes) -> CtOption<Self> {
+        let mut non_mont = Default::default();
+        fiat_p384_from_bytes(&mut non_mont, bytes.as_ref());
+        let mut mont = Default::default();
+        fiat_p384_to_montgomery(&mut mont, &non_mont);
+        let out = FieldElement(mont);
+        CtOption::new(out, 1.into())
+    }
+
+    fn ct_gt(&self, other: &Self) -> Choice {
+        // not CT
+        let mut out = Choice::from(0);
+        for (x, y) in self.0.iter().zip(other.0.iter()) {
+            if x > y {
+                out = Choice::from(1);
+            }
+        }
+        out
+    }
+}
+
 impl DefaultIsZeroes for FieldElement {}
+
+use elliptic_curve::bigint::Encoding;
+
+use crate::U384;
+
+impl From<U384> for FieldElement {
+    fn from(w: U384) -> Self {
+        let bytes = w.to_be_bytes();
+        let mut limbs = Default::default();
+        fiat_p384_from_bytes(&mut limbs, &bytes);
+        let out = Self::from_repr(FieldBytes::from(bytes));
+        out.unwrap()
+    }
+}
+
+impl From<[u64; 6]> for FieldElement {
+    fn from(w: [u64; 6]) -> Self {
+        let w: U384 = w.into();
+        w.into()
+    }
+}
 
 impl Add<&FieldElement> for &FieldElement {
     type Output = FieldElement;
