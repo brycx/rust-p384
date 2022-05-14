@@ -141,17 +141,13 @@ impl FieldElement {
     /// Returns self + rhs.
     #[inline]
     pub fn add(&self, rhs: &Self) -> Self {
-        let mut out = Self::ZERO;
-        fiat_p384_add(&mut out.0, &self.0, &rhs.0);
-        out
+        self + rhs
     }
 
     /// Returns self - rhs.
     #[inline]
     pub fn sub(&self, rhs: &Self) -> Self {
-        let mut out = Self::ZERO;
-        fiat_p384_sub(&mut out.0, &self.0, &rhs.0);
-        out
+        self - rhs
     }
 
     /// Returns self - rhs as well as a carry
@@ -165,17 +161,13 @@ impl FieldElement {
     /// Returns self * rhs mod p.
     #[inline]
     pub fn mul(&self, rhs: &Self) -> Self {
-        let mut out = Self::ZERO;
-        fiat_p384_mul(&mut out.0, &self.0, &rhs.0);
-        out
+        self * rhs
     }
 
     /// Returns -self.
     #[inline]
     pub fn neg(self) -> Self {
-        let mut out = Self::ZERO;
-        fiat_p384_opp(&mut out.0, &self.0);
-        out
+        -self
     }
 
     /// Returns 2*self.
@@ -397,7 +389,9 @@ impl Add<&FieldElement> for &FieldElement {
     type Output = FieldElement;
 
     fn add(self, rhs: &FieldElement) -> FieldElement {
-        self.add(rhs)
+        let mut out = FieldElement::ZERO;
+        fiat_p384_add(&mut out.0, &self.0, &rhs.0);
+        out
     }
 }
 
@@ -405,7 +399,9 @@ impl Add<&FieldElement> for FieldElement {
     type Output = FieldElement;
 
     fn add(self, rhs: &FieldElement) -> FieldElement {
-        FieldElement::add(&self, rhs)
+        let mut out = FieldElement::ZERO;
+        fiat_p384_add(&mut out.0, &self.0, &rhs.0);
+        out
     }
 }
 
@@ -419,7 +415,9 @@ impl Sub<&FieldElement> for &FieldElement {
     type Output = FieldElement;
 
     fn sub(self, rhs: &FieldElement) -> FieldElement {
-        self.sub(rhs)
+        let mut out = FieldElement::ZERO;
+        fiat_p384_sub(&mut out.0, &self.0, &rhs.0);
+        out
     }
 }
 
@@ -427,7 +425,9 @@ impl Sub<&FieldElement> for FieldElement {
     type Output = FieldElement;
 
     fn sub(self, rhs: &FieldElement) -> FieldElement {
-        FieldElement::sub(&self, rhs)
+        let mut out = FieldElement::ZERO;
+        fiat_p384_sub(&mut out.0, &self.0, &rhs.0);
+        out
     }
 }
 
@@ -441,7 +441,9 @@ impl Mul<&FieldElement> for &FieldElement {
     type Output = FieldElement;
 
     fn mul(self, rhs: &FieldElement) -> FieldElement {
-        self.mul(rhs)
+        let mut out = FieldElement::ZERO;
+        fiat_p384_mul(&mut out.0, &self.0, &rhs.0);
+        out
     }
 }
 
@@ -449,7 +451,9 @@ impl Mul<&FieldElement> for FieldElement {
     type Output = FieldElement;
 
     fn mul(self, rhs: &FieldElement) -> FieldElement {
-        FieldElement::mul(&self, rhs)
+        let mut out = FieldElement::ZERO;
+        fiat_p384_mul(&mut out.0, &self.0, &rhs.0);
+        out
     }
 }
 
@@ -463,7 +467,9 @@ impl Neg for FieldElement {
     type Output = Self;
 
     fn neg(self) -> Self {
-        self.neg()
+        let mut out = FieldElement::ZERO;
+        fiat_p384_opp(&mut out.0, &self.0);
+        out
     }
 }
 

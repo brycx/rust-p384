@@ -21,7 +21,7 @@
 //! ```
 //! # #[cfg(feature = "ecdsa")]
 //! # {
-//! use p384::ecdsa::{signature::Signer, Signature, SigningKey};
+//! use p384_rs::ecdsa::{signature::Signer, Signature, SigningKey};
 //! use rand_core::OsRng; // requires 'getrandom' feature
 //!
 //! // Signing
@@ -30,7 +30,7 @@
 //! let signature = signing_key.sign(message);
 //!
 //! // Verification
-//! use p384::ecdsa::{signature::Verifier, VerifyingKey};
+//! use p384_rs::ecdsa::{signature::Verifier, VerifyingKey};
 //!
 //! let verifying_key = VerifyingKey::from(&signing_key); // Serialize with `::to_encoded_point()`
 //! assert!(verifying_key.verify(message, &signature).is_ok());

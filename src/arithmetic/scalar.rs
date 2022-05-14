@@ -53,12 +53,32 @@ impl Scalar {
 
     /// Double
     pub fn double(&self) -> Self {
-        *self + self
+        let mut result = Default::default();
+        fiat_p384_scalar_add(&mut result, &self.0, &self.0);
+        Self(result)
     }
 
     /// Sub
     pub fn sub(&self, rhs: &Self) -> Self {
         *self - rhs
+    }
+
+    /// Neg
+    pub fn neg(self) -> Scalar {
+        -self
+    }
+
+    /// Multiply a scalar by another scalar.
+    pub fn mul(&self, other: &Scalar) -> Self {
+        *self * other
+    }
+
+    /// Compute modular square.
+    #[must_use]
+    pub fn square(&self) -> Self {
+        let mut result = Default::default();
+        fiat_p384_scalar_square(&mut result, &self.0);
+        Self(result)
     }
 
     /// Invert
@@ -291,21 +311,6 @@ impl Scalar {
         fiat_p384_scalar_to_bytes(&mut out, &non_mont.0);
         FieldBytes::from(out)
     }
-
-    /// Multiply a scalar by another scalar.
-    pub fn mul(&self, other: &Scalar) -> Self {
-        let mut result = Default::default();
-        fiat_p384_scalar_mul(&mut result, &self.0, &other.0);
-        Self(result)
-    }
-
-    /// Compute modular square.
-    #[must_use]
-    pub fn square(&self) -> Self {
-        let mut result = Default::default();
-        fiat_p384_scalar_square(&mut result, &self.0);
-        Self(result)
-    }
 }
 
 impl From<ScalarCore<NistP384>> for Scalar {
@@ -409,7 +414,9 @@ impl Add<Scalar> for Scalar {
     type Output = Scalar;
 
     fn add(self, other: Scalar) -> Scalar {
-        self.add(&other)
+        let mut result = Default::default();
+        fiat_p384_scalar_add(&mut result, &self.0, &other.0);
+        Self(result)
     }
 }
 
@@ -417,9 +424,9 @@ impl Add<&Scalar> for Scalar {
     type Output = Scalar;
 
     fn add(self, other: &Scalar) -> Scalar {
-        let mut fe = Fe::default();
-        fiat_p384_scalar_add(&mut fe, &self.0, &other.0);
-        Self(fe)
+        let mut result = Default::default();
+        fiat_p384_scalar_add(&mut result, &self.0, &other.0);
+        Self(result)
     }
 }
 
@@ -439,9 +446,9 @@ impl Sub<Scalar> for Scalar {
     type Output = Scalar;
 
     fn sub(self, other: Scalar) -> Scalar {
-        let mut fe = Fe::default();
-        fiat_p384_scalar_sub(&mut fe, &self.0, &other.0);
-        Self(fe)
+        let mut result = Default::default();
+        fiat_p384_scalar_sub(&mut result, &self.0, &other.0);
+        Self(result)
     }
 }
 
@@ -449,9 +456,9 @@ impl Sub<&Scalar> for Scalar {
     type Output = Scalar;
 
     fn sub(self, other: &Scalar) -> Scalar {
-        let mut fe = Fe::default();
-        fiat_p384_scalar_sub(&mut fe, &self.0, &other.0);
-        Self(fe)
+        let mut result = Default::default();
+        fiat_p384_scalar_sub(&mut result, &self.0, &other.0);
+        Self(result)
     }
 }
 
@@ -471,9 +478,9 @@ impl Neg for Scalar {
     type Output = Scalar;
 
     fn neg(self) -> Scalar {
-        let mut fe = Fe::default();
-        fiat_p384_scalar_opp(&mut fe, &self.0);
-        Self(fe)
+        let mut result = Default::default();
+        fiat_p384_scalar_opp(&mut result, &self.0);
+        Self(result)
     }
 }
 
@@ -482,23 +489,23 @@ impl Mul<&Scalar> for Scalar {
 
     #[inline]
     fn mul(self, other: &Scalar) -> Self {
-        Self::mul(&self, other)
+        let mut result = Default::default();
+        fiat_p384_scalar_mul(&mut result, &self.0, &other.0);
+        Self(result)
     }
 }
 
 impl Mul for Scalar {
     type Output = Scalar;
 
-    #[allow(clippy::op_ref)]
-    #[inline]
     fn mul(self, other: Scalar) -> Self {
-        self * &other
+        let mut result = Default::default();
+        fiat_p384_scalar_mul(&mut result, &self.0, &other.0);
+        Self(result)
     }
 }
 
 impl MulAssign<&Scalar> for Scalar {
-    #[cfg(target_pointer_width = "64")]
-    #[inline]
     fn mul_assign(&mut self, other: &Scalar) {
         *self = *self * other;
     }
@@ -507,7 +514,7 @@ impl MulAssign<&Scalar> for Scalar {
 impl MulAssign for Scalar {
     #[inline]
     fn mul_assign(&mut self, other: Scalar) {
-        self.mul_assign(&other);
+        *self = *self * other;
     }
 }
 
