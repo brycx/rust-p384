@@ -45,6 +45,31 @@ impl Scalar {
         fiat_p384_scalar_from_montgomery(&mut out, &self.0);
         Scalar(out)
     }
+
+    /// Add
+    pub fn add(&self, rhs: &Self) -> Self {
+        *self + rhs
+    }
+
+    /// Double
+    pub fn double(&self) -> Self {
+        *self + self
+    }
+
+    /// Sub
+    pub fn sub(&self, rhs: &Self) -> Self {
+        *self - rhs
+    }
+
+    /// Invert
+    pub fn invert(&self) -> CtOption<Self> {
+        Field::invert(self)
+    }
+
+    /// Invert
+    pub fn invert_vartime(&self) -> CtOption<Self> {
+        self.invert()
+    }
 }
 
 impl Field for Scalar {
