@@ -317,7 +317,9 @@ impl Scalar {
 
 impl From<ScalarCore<NistP384>> for Scalar {
     fn from(x: ScalarCore<NistP384>) -> Self {
-        Scalar::from_be_bytes_reduced(x.to_be_bytes())
+        let mut bytes = [0u8; 48];
+        bytes.copy_from_slice(x.to_be_bytes().as_slice());
+        Scalar::from_be_bytes(&bytes)
     }
 }
 
@@ -552,10 +554,22 @@ impl PrimeFieldBits for Scalar {
     }
 }
 
+impl Scalar {
+    /// Create a scalar from a canonical, big-endian representation
+    pub fn from_be_bytes(bytes: &[u8; 48]) -> Self {
+        let mut non_mont = Default::default();
+        fiat_p384_scalar_from_bytes(&mut non_mont, bytes);
+        let mut mont = Default::default();
+        fiat_p384_scalar_to_montgomery(&mut mont, &non_mont);
+        Scalar(mont)
+    }
+}
+
 impl From<&ScalarCore<NistP384>> for Scalar {
     fn from(scalar: &ScalarCore<NistP384>) -> Scalar {
-        let x = scalar.to_be_bytes();
-        Scalar::from_be_bytes_reduced(x)
+        let mut bytes = [0u8; 48];
+        bytes.copy_from_slice(scalar.to_be_bytes().as_slice());
+        Scalar::from_be_bytes(&bytes)
     }
 }
 
