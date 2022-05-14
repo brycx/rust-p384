@@ -3,6 +3,7 @@
 #[cfg(not(target_pointer_width = "64"))]
 compile_error!("scalar arithmetic is only supported on 64-bit platforms");
 
+pub(crate) mod blinded;
 mod p384_scalar;
 
 use p384_scalar::*;
@@ -20,10 +21,10 @@ use elliptic_curve::{
     rand_core::RngCore,
     subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption},
     zeroize::DefaultIsZeroes,
-    Curve as _, Error, IsHigh, Result, ScalarArithmetic,
+    Curve as _, Error, IsHigh, Result, ScalarArithmetic, ScalarCore,
 };
 
-use crate::{FieldBytes, NistP384, ScalarCore, U384};
+use crate::{FieldBytes, NistP384, U384};
 
 fn frac_modulus_2() -> Scalar {
     Scalar::from(NistP384::ORDER.shr_vartime(1).to_be_bytes())
@@ -282,8 +283,8 @@ impl Scalar {
     }
 }
 
-impl From<elliptic_curve::ScalarCore<NistP384>> for Scalar {
-    fn from(x: elliptic_curve::ScalarCore<NistP384>) -> Self {
+impl From<ScalarCore<NistP384>> for Scalar {
+    fn from(x: ScalarCore<NistP384>) -> Self {
         Scalar::from_be_bytes_reduced(x.to_be_bytes())
     }
 }

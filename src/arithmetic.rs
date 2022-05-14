@@ -7,8 +7,8 @@
 
 #![allow(clippy::unusual_byte_groupings)]
 pub(crate) mod affine;
-mod field;
-mod projective;
+pub(crate) mod field;
+pub(crate) mod projective;
 pub(crate) mod scalar;
 
 use affine::AffinePoint;
