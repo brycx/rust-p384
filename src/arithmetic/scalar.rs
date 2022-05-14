@@ -23,8 +23,10 @@ use elliptic_curve::{
     zeroize::DefaultIsZeroes,
     Curve as _, Error, IsHigh, Result, ScalarArithmetic, ScalarCore,
 };
+#[cfg(feature = "bits")]
+use {crate::ScalarBits, elliptic_curve::group::ff::PrimeFieldBits};
 
-use crate::{FieldBytes, NistP384, U384};
+use crate::{FieldBytes, NistP384, SecretKey, U384};
 
 fn frac_modulus_2() -> Scalar {
     Scalar::from(NistP384::ORDER.shr_vartime(1).to_be_bytes())
@@ -372,6 +374,12 @@ impl From<&Scalar> for FieldBytes {
     }
 }
 
+impl From<&Scalar> for U384 {
+    fn from(scalar: &Scalar) -> U384 {
+        U384::from_be_bytes(scalar.to_bytes().into())
+    }
+}
+
 impl ConditionallySelectable for Scalar {
     fn conditional_select(a: &Self, b: &Self, choice: Choice) -> Self {
         let mut out = Default::default();
@@ -524,6 +532,48 @@ impl Reduce<U384> for Scalar {
         let underflow = Choice::from((underflow.0 >> (Limb::BIT_SIZE - 1)) as u8);
         let reduced = U384::conditional_select(&w, &r, !underflow);
         Scalar::from(ScalarCore::new(reduced).unwrap())
+    }
+}
+
+#[cfg(feature = "bits")]
+#[cfg_attr(docsrs, doc(cfg(feature = "bits")))]
+impl PrimeFieldBits for Scalar {
+    #[cfg(target_pointer_width = "32")]
+    type ReprBits = [u32; 12];
+    #[cfg(target_pointer_width = "64")]
+    type ReprBits = [u64; 6];
+
+    fn to_le_bits(&self) -> ScalarBits {
+        self.into()
+    }
+
+    fn char_le_bits() -> ScalarBits {
+        NistP384::ORDER.to_uint_array().into()
+    }
+}
+
+impl From<&ScalarCore<NistP384>> for Scalar {
+    fn from(scalar: &ScalarCore<NistP384>) -> Scalar {
+        let x = scalar.to_be_bytes();
+        Scalar::from_be_bytes_reduced(x)
+    }
+}
+
+impl From<Scalar> for ScalarCore<NistP384> {
+    fn from(scalar: Scalar) -> ScalarCore<NistP384> {
+        ScalarCore::new(U384::from_be_bytes(scalar.to_bytes().into())).unwrap()
+    }
+}
+
+impl From<&Scalar> for ScalarCore<NistP384> {
+    fn from(scalar: &Scalar) -> ScalarCore<NistP384> {
+        ScalarCore::new(U384::from_be_bytes(scalar.to_bytes().into())).unwrap()
+    }
+}
+
+impl From<&SecretKey> for Scalar {
+    fn from(secret_key: &SecretKey) -> Scalar {
+        *secret_key.to_nonzero_scalar()
     }
 }
 
