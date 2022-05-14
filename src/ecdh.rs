@@ -46,6 +46,6 @@ pub type SharedSecret = elliptic_curve::ecdh::SharedSecret<NistP384>;
 
 impl From<&AffinePoint> for SharedSecret {
     fn from(affine: &AffinePoint) -> SharedSecret {
-        affine.x.to_bytes().into()
+        affine.x.to_sec1().into()
     }
 }

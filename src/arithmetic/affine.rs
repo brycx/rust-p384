@@ -40,16 +40,16 @@ impl AffineArithmetic for NistP384 {
 #[cfg_attr(docsrs, doc(cfg(feature = "arithmetic")))]
 pub struct AffinePoint {
     /// x-coordinate
-    pub(crate) x: FieldElement,
+    pub x: FieldElement,
 
     /// y-coordinate
-    pub(crate) y: FieldElement,
+    pub y: FieldElement,
 
     /// Is this point the point at infinity? 0 = no, 1 = yes
     ///
     /// This is a proxy for [`Choice`], but uses `u8` instead to permit `const`
     /// constructors for `IDENTITY` and `GENERATOR`.
-    pub(super) infinity: u8,
+    pub infinity: u8,
 }
 
 impl AffinePoint {
@@ -113,7 +113,7 @@ impl PrimeCurveAffine for AffinePoint {
 
 impl AffineXCoordinate<NistP384> for AffinePoint {
     fn x(&self) -> FieldBytes {
-        self.x.to_bytes()
+        self.x.to_sec1()
     }
 }
 
@@ -179,7 +179,7 @@ impl Neg for AffinePoint {
 
 impl DecompressPoint<NistP384> for AffinePoint {
     fn decompress(x_bytes: &FieldBytes, y_is_odd: Choice) -> CtOption<Self> {
-        FieldElement::from_bytes(x_bytes).and_then(|x| {
+        FieldElement::from_sec1(x_bytes).and_then(|x| {
             let alpha = x * &x * &x + &(CURVE_EQUATION_A * &x) + &CURVE_EQUATION_B;
             let beta = alpha.sqrt();
 
@@ -227,7 +227,7 @@ impl GroupEncoding for AffinePoint {
 
 impl DecompactPoint<NistP384> for AffinePoint {
     fn decompact(x_bytes: &FieldBytes) -> CtOption<Self> {
-        FieldElement::from_bytes(x_bytes).and_then(|x| {
+        FieldElement::from_sec1(x_bytes).and_then(|x| {
             let montgomery_y = (x * &x * &x + &(CURVE_EQUATION_A * &x) + &CURVE_EQUATION_B).sqrt();
             montgomery_y.map(|montgomery_y| {
                 // Convert to canonical form for comparisons
@@ -261,8 +261,8 @@ impl FromEncodedPoint<NistP384> for AffinePoint {
                 AffinePoint::decompress(x, Choice::from(y_is_odd as u8))
             }
             sec1::Coordinates::Uncompressed { x, y } => {
-                let x = FieldElement::from_bytes(x);
-                let y = FieldElement::from_bytes(y);
+                let x = FieldElement::from_sec1(x);
+                let y = FieldElement::from_sec1(y);
 
                 x.and_then(|x| {
                     y.and_then(|y| {
@@ -270,7 +270,7 @@ impl FromEncodedPoint<NistP384> for AffinePoint {
                         let lhs = y * &y;
                         let rhs = x * &x * &x + &(CURVE_EQUATION_A * &x) + &CURVE_EQUATION_B;
                         let point = AffinePoint { x, y, infinity: 0 };
-                        CtOption::new(point, lhs.ct_eq(&rhs))
+                        dbg!(CtOption::new(point, lhs.ct_eq(&rhs)))
                     })
                 })
             }
@@ -281,11 +281,7 @@ impl FromEncodedPoint<NistP384> for AffinePoint {
 impl ToEncodedPoint<NistP384> for AffinePoint {
     fn to_encoded_point(&self, compress: bool) -> EncodedPoint {
         EncodedPoint::conditional_select(
-            &EncodedPoint::from_affine_coordinates(
-                &self.x.to_bytes(),
-                &self.y.to_bytes(),
-                compress,
-            ),
+            &EncodedPoint::from_affine_coordinates(&self.x.to_sec1(), &self.y.to_sec1(), compress),
             &EncodedPoint::identity(),
             self.is_identity(),
         )
@@ -304,7 +300,7 @@ impl ToCompactEncodedPoint<NistP384> for AffinePoint {
         // Reuse the CompressedPoint type since it's the same size as a compact point
         let mut bytes = CompressedPoint::default();
         bytes[0] = sec1::Tag::Compact.into();
-        let x = self.x.to_bytes();
+        let x = self.x.to_sec1();
         bytes[1..(<NistP384 as Curve>::UInt::BYTE_SIZE + 1)].copy_from_slice(x.as_slice());
         CtOption::new(
             EncodedPoint::from_bytes(bytes).expect("compact key"),

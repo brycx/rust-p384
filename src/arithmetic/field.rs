@@ -31,6 +31,7 @@ use core::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 use elliptic_curve::{
     subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption},
     zeroize::DefaultIsZeroes,
+    Field,
 };
 
 pub(super) use self::field_impl::fiat_p384_montgomery_domain_field_element as FieldElementImpl;
@@ -73,11 +74,15 @@ impl FieldElement {
     /// Zero element.
     pub const ZERO: Self = Self([0; LIMBS]);
 
+    pub fn from_limbs(limbs: [Limb; LIMBS]) -> Self {
+        FieldElement(limbs)
+    }
+
     /// Attempts to parse the given byte array as an SEC1-encoded field element.
     ///
     /// Returns None if the byte array does not contain a big-endian integer in
     /// the range [0, p).
-    pub fn from_bytes(bytes: &FieldBytes) -> CtOption<Self> {
+    pub fn from_sec1(bytes: &FieldBytes) -> CtOption<Self> {
         let mut w = [Limb::default(); LIMBS];
 
         // Interpret the bytes as a big-endian integer w.
@@ -103,7 +108,7 @@ impl FieldElement {
     }
 
     /// Returns the SEC1 encoding of this field element.
-    pub fn to_bytes(self) -> FieldBytes {
+    pub fn to_sec1(self) -> FieldBytes {
         // Convert from Montgomery form to canonical form
         let tmp = self.to_canonical();
 
@@ -235,12 +240,13 @@ impl FieldElement {
 
     /// Translate a field element into the Montgomery domain.
     #[inline]
-    pub fn to_montgomery(self) -> Self {
+    pub(crate) fn to_montgomery(self) -> Self {
         let mut out = Self::ZERO;
         fiat_p384_to_montgomery(&mut out.0, &self.0);
         out
     }
 
+    /// Inversion
     pub fn invert(&self) -> CtOption<Self> {
         let limbs = &self.0;
         type Fe = fiat_p384_montgomery_domain_field_element;
@@ -303,7 +309,7 @@ impl FieldElement {
         fiat_p384_selectznz(&mut v_, s, &v, &v_opp);
         let mut fe: Fe = Default::default();
         fiat_p384_mul(&mut fe, &v_, &precomp);
-        CtOption::new(fe.into(), 1.into())
+        CtOption::new(FieldElement::from(fe), 1.into())
     }
 }
 
@@ -365,6 +371,7 @@ impl FieldElement {
 impl DefaultIsZeroes for FieldElement {}
 
 use elliptic_curve::bigint::Encoding;
+use elliptic_curve::generic_array::GenericArray;
 
 use crate::U384;
 
@@ -380,8 +387,7 @@ impl From<U384> for FieldElement {
 
 impl From<[u64; 6]> for FieldElement {
     fn from(w: [u64; 6]) -> Self {
-        let w: U384 = w.into();
-        w.into()
+        FieldElement::from_limbs(w)
     }
 }
 
@@ -478,4 +484,20 @@ impl Neg for FieldElement {
 pub const fn sbb(a: u64, b: u64, borrow: u64) -> (u64, u64) {
     let ret = (a as u128).wrapping_sub((b as u128) + ((borrow >> 63) as u128));
     (ret as u64, (ret >> 64) as u64)
+}
+
+/// Basic tests that field inversion works.
+#[test]
+fn invert() {
+    let one = FieldElement::ONE;
+    assert_eq!(one.invert().unwrap(), one);
+
+    let three = one + &one + &one;
+    let inv_three = three.invert().unwrap();
+    assert_eq!(three * &inv_three, one);
+
+    let minus_three = -three;
+    let inv_minus_three = minus_three.invert().unwrap();
+    assert_eq!(inv_minus_three, -inv_three);
+    assert_eq!(three * &inv_minus_three, -one);
 }
