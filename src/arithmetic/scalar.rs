@@ -544,7 +544,7 @@ impl PrimeFieldBits for Scalar {
     type ReprBits = [u64; 6];
 
     fn to_le_bits(&self) -> ScalarBits {
-        self.into()
+        self.0.into()
     }
 
     fn char_le_bits() -> ScalarBits {
