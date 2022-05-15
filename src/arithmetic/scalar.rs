@@ -121,12 +121,12 @@ impl Field for Scalar {
 
     #[must_use]
     fn square(&self) -> Self {
-        Scalar::square(&self)
+        Scalar::square(self)
     }
 
     #[must_use]
     fn double(&self) -> Self {
-        Scalar::double(&self)
+        Scalar::double(self)
     }
 
     fn invert(&self) -> CtOption<Self> {

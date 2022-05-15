@@ -31,7 +31,6 @@ use core::ops::{Add, AddAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 use elliptic_curve::{
     subtle::{Choice, ConditionallySelectable, ConstantTimeEq, CtOption},
     zeroize::DefaultIsZeroes,
-    Field,
 };
 
 pub(super) use self::field_impl::fiat_p384_montgomery_domain_field_element as FieldElementImpl;
@@ -347,7 +346,7 @@ impl ConstantTimeEq for FieldElement {
 }
 
 impl FieldElement {
-    fn from_repr(bytes: FieldBytes) -> CtOption<Self> {
+    fn from_field_bytes(bytes: FieldBytes) -> CtOption<Self> {
         let mut non_mont = Default::default();
         fiat_p384_from_bytes(&mut non_mont, bytes.as_ref());
         let mut mont = Default::default();
@@ -371,16 +370,13 @@ impl FieldElement {
 impl DefaultIsZeroes for FieldElement {}
 
 use elliptic_curve::bigint::Encoding;
-use elliptic_curve::generic_array::GenericArray;
 
 use crate::U384;
 
 impl From<U384> for FieldElement {
     fn from(w: U384) -> Self {
         let bytes = w.to_be_bytes();
-        let mut limbs = Default::default();
-        fiat_p384_from_bytes(&mut limbs, &bytes);
-        let out = Self::from_repr(FieldBytes::from(bytes));
+        let out = Self::from_field_bytes(FieldBytes::from(bytes));
         out.unwrap()
     }
 }
