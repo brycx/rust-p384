@@ -611,31 +611,31 @@ mod tests {
     #[test]
     fn multiply() {
         let one = Scalar::one();
-        let two = one + &one;
-        let three = two + &one;
-        let six = three + &three;
-        assert_eq!(six, two * &three);
+        let two = one + one;
+        let three = two + one;
+        let six = three + three;
+        assert_eq!(six, two * three);
 
         let minus_two = -two;
         let minus_three = -three;
         assert_eq!(two, -minus_two);
 
-        assert_eq!(minus_three * &minus_two, minus_two * &minus_three);
-        assert_eq!(six, minus_two * &minus_three);
+        assert_eq!(minus_three * minus_two, minus_two * minus_three);
+        assert_eq!(six, minus_two * minus_three);
     }
 
     /// Basic tests that scalar inversion works.
     #[test]
     fn invert() {
         let one = Scalar::one();
-        let three = one + &one + &one;
+        let three = one + one + one;
         let inv_three = three.invert().unwrap();
-        assert_eq!(three * &inv_three, one);
+        assert_eq!(three * inv_three, one);
 
         let minus_three = -three;
         let inv_minus_three = minus_three.invert().unwrap();
         assert_eq!(inv_minus_three, -inv_three);
-        assert_eq!(three * &inv_minus_three, -one);
+        assert_eq!(three * inv_minus_three, -one);
     }
 
     /// Basic tests that sqrt works.
