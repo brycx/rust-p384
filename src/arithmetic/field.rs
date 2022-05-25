@@ -221,12 +221,7 @@ impl FieldElement {
         let x252 = x126.sqn(126) * &x126;
         let x255 = x252.sqn(3) * &_111;
         let x = ((x255.sqn(33) * &x32).sqn(64) * &_1).sqn(30);
-
-        if x.square() == _1 {
-            CtOption::new(x, 1.into())
-        } else {
-            CtOption::new(x, 0.into())
-        }
+        CtOption::new(x, x.square().ct_eq(&_1))
     }
 
     /// Translate a field element out of the Montgomery domain.
