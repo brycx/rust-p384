@@ -34,6 +34,11 @@ ecdsa-core = { version = "0.14", package = "ecdsa", default-features = false, fe
 hex-literal = "0.3"
 proptest = "1.0"
 rand_core = { version = "0.6", features = ["getrandom"] }
+benchmark-simple = "0.1.7"
+
+[[bench]]
+name = "benchmark"
+harness = false
 
 [features]
 default = [
