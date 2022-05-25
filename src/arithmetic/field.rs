@@ -190,6 +190,7 @@ impl FieldElement {
         out
     }
 
+    /// Returns self^(2^n) mod p
     fn sqn(&self, n: usize) -> Self {
         let mut x = *self;
         for _ in 0..n {
