@@ -195,16 +195,37 @@ impl ProjectivePoint {
 
     /// Returns `[k] self`.
     fn mul(&self, k: &Scalar) -> ProjectivePoint {
-        let mut ret = ProjectivePoint::IDENTITY;
+        let mut pc = [ProjectivePoint::default(); 16];
+        pc[0] = ProjectivePoint::IDENTITY;
+        pc[1] = *self;
+        for i in 2..16 {
+            pc[i] = if i % 2 == 0 {
+                pc[i / 2].double()
+            } else {
+                pc[i - 1].add(self)
+            };
+        }
+        let mut q = ProjectivePoint::IDENTITY;
         let k_ = k.to_bytes();
         let k = k_.as_slice();
-        for limb in k.iter().rev() {
-            for i in (0..8).rev() {
-                ret = ret.double();
-                ret.conditional_assign(&(ret + self), Choice::from(((limb >> i) & 1) as u8));
+        let mut pos = 384 - 4;
+        loop {
+            let slot = (k[(pos >> 3) as usize] >> (pos & 7)) & 0xf;
+            let mut t = ProjectivePoint::IDENTITY;
+            for i in 1..16 {
+                t.conditional_assign(
+                    &pc[i],
+                    Choice::from(((slot as usize ^ i).wrapping_sub(1) >> 8) as u8 & 1),
+                );
             }
+            q = q.add(&t);
+            if pos == 0 {
+                break;
+            }
+            q = q.double().double().double().double();
+            pos -= 4;
         }
-        ret
+        q
     }
 }
 
