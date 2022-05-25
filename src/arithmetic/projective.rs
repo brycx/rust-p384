@@ -206,8 +206,7 @@ impl ProjectivePoint {
             };
         }
         let mut q = ProjectivePoint::IDENTITY;
-        let k_ = k.to_bytes();
-        let k = k_.as_slice();
+        let k = k.to_bytes();
         let mut pos = 384 - 4;
         loop {
             let slot = (k[(pos >> 3) as usize] >> (pos & 7)) & 0xf;
