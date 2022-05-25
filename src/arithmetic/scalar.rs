@@ -268,8 +268,7 @@ impl PrimeField for Scalar {
     }
 
     fn to_repr(&self) -> FieldBytes {
-        let non_mont = self.to_non_mont();
-        non_mont.to_bytes()
+        self.to_bytes()
     }
 
     fn is_odd(&self) -> Choice {
