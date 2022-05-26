@@ -39,11 +39,3 @@ const CURVE_EQUATION_B: FieldElement = FieldElement([
     0xb62b21f4_1f022094,
     0xcd08114b_604fbff9,
 ]);
-
-fn swap48(x: &[u8; 48]) -> [u8; 48] {
-    let mut swapped = [0u8; 48];
-    for (v, r) in x.iter().rev().zip(swapped.iter_mut()) {
-        *r = *v;
-    }
-    swapped
-}

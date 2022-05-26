@@ -260,7 +260,7 @@ impl PrimeField for Scalar {
 
     fn from_repr(bytes: FieldBytes) -> CtOption<Self> {
         let mut non_mont = Default::default();
-        fiat_p384_scalar_from_bytes(&mut non_mont, &super::swap48(bytes.as_ref()));
+        fiat_p384_scalar_from_bytes(&mut non_mont, &swap48(bytes.as_ref()));
         let mut mont = Default::default();
         fiat_p384_scalar_to_montgomery(&mut mont, &non_mont);
         let out = Scalar(mont);
@@ -292,6 +292,14 @@ impl PrimeField for Scalar {
     }
 }
 
+fn swap48(x: &[u8; 48]) -> [u8; 48] {
+    let mut swapped = [0u8; 48];
+    for (v, r) in x.iter().rev().zip(swapped.iter_mut()) {
+        *r = *v;
+    }
+    swapped
+}
+
 impl Scalar {
     /// Multiplicative identity.
     pub const ONE: Self = Self([
@@ -310,7 +318,7 @@ impl Scalar {
         let non_mont = self.to_non_mont();
         let mut out = [0u8; 48];
         fiat_p384_scalar_to_bytes(&mut out, &non_mont.0);
-        out = super::swap48(&out);
+        out = swap48(&out);
         FieldBytes::from(out)
     }
 }
@@ -339,7 +347,7 @@ impl TryFrom<U384> for Scalar {
     fn try_from(w: U384) -> Result<Self> {
         let bytes = w.to_be_bytes();
         let mut limbs = NonMontFe::default();
-        fiat_p384_scalar_from_bytes(&mut limbs, &super::swap48(&bytes));
+        fiat_p384_scalar_from_bytes(&mut limbs, &swap48(&bytes));
         let out = Self::from_repr(FieldBytes::from(bytes));
         Ok(out.unwrap())
     }
@@ -558,7 +566,7 @@ impl Scalar {
     /// Create a scalar from a canonical, big-endian representation
     pub fn from_be_bytes(bytes: &[u8; 48]) -> Self {
         let mut non_mont = Default::default();
-        fiat_p384_scalar_from_bytes(&mut non_mont, &super::swap48(bytes));
+        fiat_p384_scalar_from_bytes(&mut non_mont, &swap48(bytes));
         let mut mont = Default::default();
         fiat_p384_scalar_to_montgomery(&mut mont, &non_mont);
         Scalar(mont)
