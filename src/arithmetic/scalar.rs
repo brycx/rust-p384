@@ -268,7 +268,7 @@ impl PrimeField for Scalar {
     }
 
     fn to_repr(&self) -> FieldBytes {
-        self.to_bytes()
+        self.to_be_bytes()
     }
 
     fn is_odd(&self) -> Choice {
@@ -313,21 +313,27 @@ impl Scalar {
     /// Zero scalar.
     pub const ZERO: Self = Self([0, 0, 0, 0, 0, 0]);
 
-    /// Returns the SEC1 encoding of this scalar.
-    pub fn to_bytes(&self) -> FieldBytes {
+    /// Returns the little-endian encoding of this scalar.
+    pub fn to_le_bytes(&self) -> FieldBytes {
         let non_mont = self.to_non_mont();
         let mut out = [0u8; 48];
         fiat_p384_scalar_to_bytes(&mut out, &non_mont.0);
-        out = swap48(&out);
         FieldBytes::from(out)
+    }
+
+    /// Returns the little-endian encoding of this scalar.
+    pub fn to_be_bytes(&self) -> FieldBytes {
+        let mut out = [0u8; 48];
+        out.copy_from_slice(&self.to_le_bytes());
+        FieldBytes::from(swap48(&out))
     }
 }
 
 impl From<ScalarCore<NistP384>> for Scalar {
     fn from(x: ScalarCore<NistP384>) -> Self {
         let mut bytes = [0u8; 48];
-        bytes.copy_from_slice(x.to_be_bytes().as_slice());
-        Scalar::from_be_bytes(&bytes)
+        bytes.copy_from_slice(x.to_le_bytes().as_slice());
+        Scalar::from_le_bytes(&bytes)
     }
 }
 
@@ -345,9 +351,9 @@ impl TryFrom<U384> for Scalar {
     type Error = Error;
 
     fn try_from(w: U384) -> Result<Self> {
-        let bytes = w.to_be_bytes();
+        let bytes = w.to_le_bytes();
         let mut limbs = NonMontFe::default();
-        fiat_p384_scalar_from_bytes(&mut limbs, &swap48(&bytes));
+        fiat_p384_scalar_from_bytes(&mut limbs, &bytes);
         let out = Self::from_repr(FieldBytes::from(bytes));
         Ok(out.unwrap())
     }
@@ -361,8 +367,8 @@ impl From<[u8; 48]> for Scalar {
 
 impl From<Scalar> for U384 {
     fn from(scalar: Scalar) -> U384 {
-        let bytes = scalar.to_bytes();
-        U384::from_be_bytes(bytes.into())
+        let bytes = scalar.to_le_bytes();
+        U384::from_le_bytes(bytes.into())
     }
 }
 
@@ -386,7 +392,7 @@ impl From<&Scalar> for FieldBytes {
 
 impl From<&Scalar> for U384 {
     fn from(scalar: &Scalar) -> U384 {
-        U384::from_be_bytes(scalar.to_bytes().into())
+        U384::from_le_bytes(scalar.to_le_bytes().into())
     }
 }
 
@@ -564,32 +570,37 @@ impl PrimeFieldBits for Scalar {
 
 impl Scalar {
     /// Create a scalar from a canonical, big-endian representation
-    pub fn from_be_bytes(bytes: &[u8; 48]) -> Self {
+    pub fn from_le_bytes(bytes: &[u8; 48]) -> Self {
         let mut non_mont = Default::default();
-        fiat_p384_scalar_from_bytes(&mut non_mont, &swap48(bytes));
+        fiat_p384_scalar_from_bytes(&mut non_mont, bytes);
         let mut mont = Default::default();
         fiat_p384_scalar_to_montgomery(&mut mont, &non_mont);
         Scalar(mont)
+    }
+
+    /// Create a scalar from a canonical, big-endian representation
+    pub fn from_be_bytes(bytes: &[u8; 48]) -> Self {
+        Scalar::from_le_bytes(&swap48(bytes))
     }
 }
 
 impl From<&ScalarCore<NistP384>> for Scalar {
     fn from(scalar: &ScalarCore<NistP384>) -> Scalar {
         let mut bytes = [0u8; 48];
-        bytes.copy_from_slice(scalar.to_be_bytes().as_slice());
-        Scalar::from_be_bytes(&bytes)
+        bytes.copy_from_slice(scalar.to_le_bytes().as_slice());
+        Scalar::from_le_bytes(&bytes)
     }
 }
 
 impl From<Scalar> for ScalarCore<NistP384> {
     fn from(scalar: Scalar) -> ScalarCore<NistP384> {
-        ScalarCore::new(U384::from_be_bytes(scalar.to_bytes().into())).unwrap()
+        ScalarCore::new(U384::from_le_bytes(scalar.to_le_bytes().into())).unwrap()
     }
 }
 
 impl From<&Scalar> for ScalarCore<NistP384> {
     fn from(scalar: &Scalar) -> ScalarCore<NistP384> {
-        ScalarCore::new(U384::from_be_bytes(scalar.to_bytes().into())).unwrap()
+        ScalarCore::new(U384::from_le_bytes(scalar.to_le_bytes().into())).unwrap()
     }
 }
 
@@ -610,10 +621,10 @@ mod tests {
     fn from_to_bytes_roundtrip() {
         let k: u64 = 42;
         let mut bytes = FieldBytes::default();
-        bytes[40..].copy_from_slice(k.to_be_bytes().as_ref());
+        bytes[40..].copy_from_slice(k.to_le_bytes().as_ref());
 
         let scalar = Scalar::from_repr(bytes).unwrap();
-        assert_eq!(bytes, scalar.to_bytes());
+        assert_eq!(bytes, scalar.to_be_bytes());
     }
 
     /// Basic tests that multiplication works.

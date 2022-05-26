@@ -206,10 +206,10 @@ impl ProjectivePoint {
             };
         }
         let mut q = ProjectivePoint::IDENTITY;
-        let k = k.to_bytes();
+        let k = k.to_le_bytes();
         let mut pos = 384 - 4;
         loop {
-            let slot = (k[47 - (pos >> 3) as usize] >> (pos & 7)) & 0xf;
+            let slot = (k[(pos >> 3) as usize] >> (pos & 7)) & 0xf;
             let mut t = ProjectivePoint::IDENTITY;
             for i in 1..16 {
                 t.conditional_assign(
