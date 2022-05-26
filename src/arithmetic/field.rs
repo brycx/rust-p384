@@ -137,9 +137,8 @@ impl FieldElement {
     ///
     /// If odd, return `Choice(1)`.  Otherwise, return `Choice(0)`.
     pub fn is_odd(&self) -> Choice {
-        let mut non_mont = Default::default();
-        fiat_p384_from_montgomery(&mut non_mont, &self.0);
-        Choice::from((self.0[self.0.len() - 1] & 1) as u8)
+        let bytes = self.to_sec1();
+        (bytes[47] & 1).into()
     }
 
     /// Returns self + rhs.
@@ -492,4 +491,12 @@ fn invert() {
     let inv_minus_three = minus_three.invert().unwrap();
     assert_eq!(inv_minus_three, -inv_three);
     assert_eq!(three * &inv_minus_three, -one);
+}
+
+#[test]
+fn sqrt() {
+    let one = FieldElement::ONE;
+    let two = one + &one;
+    let four = two.square();
+    assert_eq!(four.sqrt().unwrap(), two);
 }

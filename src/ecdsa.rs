@@ -115,3 +115,25 @@ fn verifying_key_equivalent() {
     assert_eq!(type_pk.as_bytes(), &raw_pk);
     assert_eq!(sec1_pk, type_pk);
 }
+
+#[cfg(feature = "ecdsa")]
+#[test]
+fn point_compression_wycheproof() {
+    let pk_uncompressed: [u8; 97] = [
+        4, 45, 165, 125, 218, 16, 137, 39, 106, 84, 63, 159, 253, 172, 11, 255, 13, 151, 108, 173,
+        113, 235, 114, 128, 231, 217, 191, 217, 254, 228, 189, 178, 242, 15, 71, 255, 136, 130,
+        116, 56, 151, 114, 217, 140, 197, 117, 33, 56, 170, 75, 109, 5, 77, 105, 220, 243, 226, 94,
+        196, 157, 248, 112, 113, 94, 52, 136, 59, 24, 54, 25, 125, 118, 248, 173, 150, 46, 120,
+        246, 87, 27, 188, 116, 7, 176, 214, 9, 31, 158, 77, 136, 240, 20, 39, 68, 6, 23, 79,
+    ];
+
+    let sec1_pk = VerifyingKey::from_sec1_bytes(pk_uncompressed.as_slice())
+        .unwrap()
+        .to_encoded_point(true);
+    let roundtrip = VerifyingKey::from_sec1_bytes(&sec1_pk.as_bytes()).unwrap();
+
+    assert_eq!(
+        roundtrip.to_encoded_point(false).as_bytes(),
+        pk_uncompressed
+    );
+}
