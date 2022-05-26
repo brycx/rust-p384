@@ -91,3 +91,27 @@ fn signing_secret_key_equivalent() {
     assert_eq!(sigk.to_bytes().as_slice(), &raw_sk);
     assert_eq!(sigk.to_bytes(), seck.to_be_bytes());
 }
+
+#[cfg(feature = "ecdsa")]
+#[test]
+fn verifying_key_equivalent() {
+    let raw_sk: [u8; 48] = [
+        32, 52, 118, 9, 96, 116, 119, 172, 168, 251, 251, 197, 230, 33, 132, 85, 243, 25, 150, 105,
+        121, 46, 248, 180, 102, 250, 168, 123, 220, 103, 121, 129, 68, 200, 72, 221, 3, 102, 30,
+        237, 90, 198, 36, 97, 52, 12, 234, 150,
+    ];
+    let raw_pk: [u8; 49] = [
+        2, 251, 203, 124, 105, 238, 28, 96, 87, 155, 231, 163, 52, 19, 72, 120, 217, 197, 197, 191,
+        53, 213, 82, 218, 182, 60, 1, 64, 57, 126, 209, 76, 239, 99, 125, 119, 32, 146, 92, 68,
+        105, 158, 163, 14, 114, 135, 76, 114, 251,
+    ];
+    let signing_key = SigningKey::from_bytes(raw_sk.as_slice()).unwrap();
+
+    let type_pk = VerifyingKey::from(&signing_key).to_encoded_point(true);
+    let sec1_pk = VerifyingKey::from_sec1_bytes(&raw_pk.as_slice())
+        .unwrap()
+        .to_encoded_point(true);
+
+    assert_eq!(type_pk.as_bytes(), &raw_pk);
+    assert_eq!(sec1_pk, type_pk);
+}
