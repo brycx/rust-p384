@@ -29,7 +29,7 @@ use {crate::ScalarBits, elliptic_curve::group::ff::PrimeFieldBits};
 use crate::{FieldBytes, NistP384, SecretKey, U384};
 
 fn frac_modulus_2() -> Scalar {
-    Scalar::from(NistP384::ORDER.shr_vartime(1).to_be_bytes())
+    Scalar::from_le_bytes(&NistP384::ORDER.shr_vartime(1).to_le_bytes())
 }
 
 impl ScalarArithmetic for NistP384 {
@@ -356,12 +356,6 @@ impl TryFrom<U384> for Scalar {
         fiat_p384_scalar_from_bytes(&mut limbs, &bytes);
         let out = Self::from_repr(FieldBytes::from(bytes));
         Ok(out.unwrap())
-    }
-}
-
-impl From<[u8; 48]> for Scalar {
-    fn from(x: [u8; 48]) -> Self {
-        Self::from_repr(FieldBytes::from(x)).unwrap()
     }
 }
 
