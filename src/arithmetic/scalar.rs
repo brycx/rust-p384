@@ -354,8 +354,7 @@ impl TryFrom<U384> for Scalar {
         let bytes = w.to_le_bytes();
         let mut limbs = NonMontFe::default();
         fiat_p384_scalar_from_bytes(&mut limbs, &bytes);
-        let out = Self::from_repr(FieldBytes::from(bytes));
-        Ok(out.unwrap())
+        Ok(Scalar(limbs))
     }
 }
 
