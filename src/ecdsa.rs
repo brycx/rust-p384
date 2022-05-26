@@ -108,7 +108,7 @@ fn verifying_key_equivalent() {
     let signing_key = SigningKey::from_bytes(raw_sk.as_slice()).unwrap();
 
     let type_pk = VerifyingKey::from(&signing_key).to_encoded_point(true);
-    let sec1_pk = VerifyingKey::from_sec1_bytes(&raw_pk.as_slice())
+    let sec1_pk = VerifyingKey::from_sec1_bytes(raw_pk.as_slice())
         .unwrap()
         .to_encoded_point(true);
 
