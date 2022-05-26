@@ -29,7 +29,7 @@ use {crate::ScalarBits, elliptic_curve::group::ff::PrimeFieldBits};
 use crate::{FieldBytes, NistP384, SecretKey, U384};
 
 fn frac_modulus_2() -> Scalar {
-    Scalar::from_le_bytes(&NistP384::ORDER.shr_vartime(1).to_le_bytes())
+    Scalar::from_le_bytes(&NistP384::ORDER.shr_vartime(1).to_le_bytes()).unwrap()
 }
 
 impl ScalarArithmetic for NistP384 {
@@ -333,7 +333,7 @@ impl From<ScalarCore<NistP384>> for Scalar {
     fn from(x: ScalarCore<NistP384>) -> Self {
         let mut bytes = [0u8; 48];
         bytes.copy_from_slice(x.to_le_bytes().as_slice());
-        Scalar::from_le_bytes(&bytes)
+        Scalar::from_le_bytes(&bytes).expect("non-canonical encoding")
     }
 }
 
@@ -563,16 +563,16 @@ impl PrimeFieldBits for Scalar {
 
 impl Scalar {
     /// Create a scalar from a canonical, big-endian representation
-    pub fn from_le_bytes(bytes: &[u8; 48]) -> Self {
+    pub fn from_le_bytes(bytes: &[u8; 48]) -> Result<Self> {
         let mut non_mont = Default::default();
         fiat_p384_scalar_from_bytes(&mut non_mont, bytes);
         let mut mont = Default::default();
         fiat_p384_scalar_to_montgomery(&mut mont, &non_mont);
-        Scalar(mont)
+        Ok(Scalar(mont))
     }
 
     /// Create a scalar from a canonical, big-endian representation
-    pub fn from_be_bytes(bytes: &[u8; 48]) -> Self {
+    pub fn from_be_bytes(bytes: &[u8; 48]) -> Result<Self> {
         Scalar::from_le_bytes(&swap48(bytes))
     }
 }
@@ -581,7 +581,7 @@ impl From<&ScalarCore<NistP384>> for Scalar {
     fn from(scalar: &ScalarCore<NistP384>) -> Scalar {
         let mut bytes = [0u8; 48];
         bytes.copy_from_slice(scalar.to_le_bytes().as_slice());
-        Scalar::from_le_bytes(&bytes)
+        Scalar::from_le_bytes(&bytes).expect("non-canonical encoding")
     }
 }
 
